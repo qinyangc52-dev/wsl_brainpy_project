@@ -1,0 +1,63 @@
+network:
+  topology: tract1
+  modules: 66
+  neurons_per_module: 200
+  active_modules_per_pattern: 12
+  active_neurons_per_module: 100
+  patterns: 20
+  sort: 0
+  swap: 1.0
+  range: 400.0
+  frequency_hz: 8.0
+  ddec: 3.3
+  dmax: 30.0
+  pmax: 3
+runtime:
+  sigma: 6.9
+  delta: 1.1
+  alpha: 0.5
+  rho: 1.0
+  noise_mode: gaussian
+  dt_ms: 0.1
+  output_bin_ms: 1.0
+  duration_ms: 20000.0
+  chunk_ms: 100.0
+  tau_a_ms: 10.0
+  tau_b_ms: 5.0
+  threshold: 1.0
+  sigma_min: null
+  sigma_max: null
+seeds:
+  network: 1256875
+  stream: 0
+  offline: 0
+  dynamics: 1256875
+artifact:
+  name: full_seed_1256875
+  dtype: float32
+  stdp_block_size: 256
+monitors:
+  flush_bins: 30
+  overlap_history: 20
+  overlap_start_ms: 100.0
+  overlap_window_ms: 200.0
+  overlap_min_fraction: 0.5
+  patterns_observed: 3
+  playback_patterns: 5
+execution:
+  progress_interval_s: 30.0
+  stop_rate_hz: 0.0
+  stop_windows: 0
+  playback_ms: 0.0
+  cpu_limit_s: 0.0
+  checkpoint_interval_s: 3600.0
+  worker_index: 0
+  debug_level: 1
+io:
+  run_name: full
+  temp_dir: output
+  output_dir: output
+  legacy_file_mode: 0
+  max_spikes: 1048576
+  stdout_path: null
+cues: []

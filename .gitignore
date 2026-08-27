@@ -1,0 +1,25 @@
+.venv/
+.wsl-venv-path
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+
+# Generated simulation inputs and outputs
+artifacts/
+runs/
+remote_results/
+eeglab_exports/
+figures/
+comparison/
+logs/
+
+# Legacy executable and generated reference outputs
+legacy_reference/
+
+# Common generated result formats
+*.h5
+*.hdf5
+*.fdt
+*.set
+*.log
