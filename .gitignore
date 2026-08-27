@@ -14,6 +14,12 @@ figures/
 comparison/
 logs/
 
+# Local execution reports and handoff notes
+docs/phase_8_9_report.md
+docs/task10_architecture_config_report.md
+docs/tasks11_13_completion_report.md
+docs/项目对话交接.md
+
 # Legacy executable and generated reference outputs
 legacy_reference/
 
