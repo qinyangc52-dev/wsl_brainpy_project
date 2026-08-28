@@ -23,6 +23,12 @@ def build_stdp_csr(
     block_size: int = 256,
     dtype=np.float32,
 ) -> sparse.csr_matrix:
+    if (
+        not isinstance(block_size, (int, np.integer))
+        or isinstance(block_size, bool)
+        or block_size <= 0
+    ):
+        raise ValueError("block_size must be a positive integer")
     n_neurons = bank.n_neurons
     result = sparse.csr_matrix((n_neurons, n_neurons), dtype=dtype)
     period = 1000.0 / frequency_hz
@@ -59,4 +65,3 @@ def build_stdp_csr(
     result.eliminate_zeros()
     result.sort_indices()
     return result
-

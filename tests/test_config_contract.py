@@ -1,8 +1,11 @@
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
 
+from ecmm.artifacts import artifact_rng_seeds, structural_hash
 from ecmm.config import (
+    ArtifactConfig,
     ConfigError,
     apply_overrides,
     config_from_dict,
@@ -108,3 +111,28 @@ def test_relocated_artifact_override_is_available_for_resume_and_analyze():
     analyze = parser.parse_args(["analyze", "runs/full", "--artifact", "artifacts/full"])
     assert resume.artifact == Path("artifacts/full")
     assert analyze.artifact == Path("artifacts/full")
+
+
+def test_offline_artifact_seed_and_stream_affect_structural_identity():
+    base = load_config(PROJECT / "configs" / "prototype.yaml")
+    assert artifact_rng_seeds(base) == (base.seeds.network, 0)
+
+    offline = replace(base, seeds=replace(base.seeds, offline=999, stream=17))
+    assert artifact_rng_seeds(offline) == (999, 0)
+    assert structural_hash(offline) != structural_hash(base)
+
+    streamed = replace(base, seeds=replace(base.seeds, stream=17))
+    assert artifact_rng_seeds(streamed) == (base.seeds.network, 17)
+    assert structural_hash(streamed) != structural_hash(base)
+
+
+@pytest.mark.parametrize("block_size", [0, -1, 1.5, True])
+def test_invalid_stdp_block_size_fails_config_validation(block_size):
+    base = load_config(PROJECT / "configs" / "prototype.yaml")
+    invalid = replace(base, artifact=ArtifactConfig(
+        name=base.artifact.name,
+        dtype=base.artifact.dtype,
+        stdp_block_size=block_size,
+    ))
+    with pytest.raises(ConfigError, match="stdp_block_size must be a positive integer"):
+        invalid.validate()

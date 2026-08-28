@@ -7,7 +7,7 @@ import numpy as np
 
 from ecmm.analysis import analyze_run, extract_avalanches
 from ecmm.config import CueConfig, load_config
-from ecmm.monitors import activity_statistics
+from ecmm.monitors import PatternOverlapMonitor, activity_statistics
 from ecmm.runtime import SimulationRunner
 
 
@@ -49,6 +49,43 @@ def test_avalanche_extraction_uses_silent_bins_as_boundaries():
     sizes, durations = extract_avalanches(counts, source_bin_ms=1.0, avalanche_bin_ms=1.0)
     np.testing.assert_array_equal(sizes, [2, 2])
     np.testing.assert_array_equal(durations, [2, 1])
+
+
+def test_overlap_windows_advance_through_silent_periods():
+    config = analysis_config()
+    config = replace(
+        config,
+        monitors=replace(
+            config.monitors,
+            flush_bins=10,
+            overlap_start_ms=0.0,
+            overlap_window_ms=5.0,
+            overlap_min_fraction=0.5,
+        ),
+    )
+    patterns = {
+        "order": np.array([[0]], dtype=np.int32),
+        "phi": np.array([[0.0]], dtype=np.float64),
+        "H": np.array([1], dtype=np.int32),
+    }
+    monitor = PatternOverlapMonitor(config, patterns)
+    monitor.update(
+        np.array([6.0, 7.0, 8.0]),
+        np.array([0, 0, 0], dtype=np.int32),
+        chunk_end_ms=10.0,
+    )
+    monitor.update(
+        np.empty(0, dtype=np.float32),
+        np.empty(0, dtype=np.int32),
+        chunk_end_ms=20.0,
+    )
+
+    assert [row["window_end_ms"] for row in monitor.rows] == [10.0, 20.0]
+    assert monitor.rows[0]["spikes"] == 3
+    assert monitor.rows[0]["max_overlap"] > 0.0
+    assert monitor.rows[1]["window_start_ms"] == 15.0
+    assert monitor.rows[1]["spikes"] == 0
+    assert monitor.rows[1]["max_overlap"] == 0.0
 
 
 def test_end_to_end_monitors_legacy_and_avalanche(tmp_path):

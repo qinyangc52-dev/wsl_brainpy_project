@@ -53,9 +53,14 @@ class PatternOverlapMonitor:
                         (self.recent_times >= self.config.monitors.overlap_start_ms))
             selected_times = self.recent_times[eligible]
             selected_neurons = self.recent_neurons[eligible]
+            available_window_ms = min(
+                self.config.monitors.overlap_window_ms,
+                max(0.0, self.next_flush_ms - self.config.monitors.overlap_start_ms),
+            )
             result = phase_overlap(
                 selected_times, selected_neurons, self.order, self.phi, self.H,
-                window_ms=self.config.monitors.overlap_window_ms,
+                window_ms=available_window_ms,
+                window_end_ms=self.next_flush_ms,
             )
             covered = result["window_end_ms"] - result["window_start_ms"]
             if (result["spikes"] <= 2 or

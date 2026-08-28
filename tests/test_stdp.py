@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 
 from ecmm.patterns import PatternBank
 from ecmm.stdp import build_stdp_csr, stdp_kernel
@@ -28,3 +29,20 @@ def test_stdp_builder_keeps_zero_diagonal():
     assert matrix.nnz == 2
     np.testing.assert_array_equal(matrix.diagonal(), [0.0, 0.0])
 
+
+@pytest.mark.parametrize("block_size", [0, -1, 1.5, True])
+def test_stdp_builder_rejects_invalid_block_size(block_size):
+    bank = PatternBank(
+        sites=np.array([[0]], dtype=np.int32),
+        who=np.array([[0]], dtype=np.int32),
+        phi=np.array([[0.1]], dtype=np.float64),
+        H=np.array([1], dtype=np.int32),
+        start=np.array([0], dtype=np.int32),
+        where=np.array([0], dtype=np.int32),
+        order=np.array([[0]], dtype=np.int32),
+        posix=np.array([[0]], dtype=np.int32),
+        Z=np.array([1], dtype=np.int32),
+        K=np.array([1], dtype=np.int32),
+    )
+    with pytest.raises(ValueError, match="block_size must be a positive integer"):
+        build_stdp_csr(bank, frequency_hz=8.0, block_size=block_size)

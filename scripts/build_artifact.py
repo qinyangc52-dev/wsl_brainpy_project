@@ -8,7 +8,13 @@ sys.path.insert(0, str(PROJECT / "src"))
 
 from ecmm.config import load_config
 from ecmm.data import effective_connectome, load_tractography
-from ecmm.offline import LegacyRNG, build_pattern_bank, build_stdp_csr, save_artifact
+from ecmm.offline import (
+    LegacyRNG,
+    artifact_rng_seeds,
+    build_pattern_bank,
+    build_stdp_csr,
+    save_artifact,
+)
 
 
 def main() -> None:
@@ -22,7 +28,7 @@ def main() -> None:
     connectome = effective_connectome(
         distances, fibers, config.network.ddec, config.network.dmax
     )
-    rng = LegacyRNG(config.seeds.network)
+    rng = LegacyRNG(*artifact_rng_seeds(config))
     bank = build_pattern_bank(config.network, rng, connectome)
     weights = build_stdp_csr(
         bank,

@@ -169,6 +169,7 @@ def validate_config(config: ProjectConfig) -> list[str]:
     m = config.monitors
     e = config.execution
     io = config.io
+    artifact = config.artifact
     if n.modules <= 0:
         errors.append("network.modules must be positive")
     if n.active_modules_per_pattern <= 0 or n.active_modules_per_pattern > n.modules:
@@ -228,6 +229,10 @@ def validate_config(config: ProjectConfig) -> list[str]:
         errors.append("io.legacy_file_mode must be a bit mask from 0 to 7")
     if io.max_spikes <= 0:
         errors.append("io.max_spikes must be positive")
+    if (not isinstance(artifact.stdp_block_size, int) or
+            isinstance(artifact.stdp_block_size, bool) or
+            artifact.stdp_block_size <= 0):
+        errors.append("artifact.stdp_block_size must be a positive integer")
     for name, value in asdict(config.seeds).items():
         if value < 0:
             errors.append(f"seeds.{name} must be non-negative")

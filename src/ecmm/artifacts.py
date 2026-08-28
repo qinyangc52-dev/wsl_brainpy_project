@@ -19,17 +19,33 @@ ARTIFACT_FILES = (
 )
 
 
+def artifact_rng_seeds(config: ProjectConfig) -> tuple[int, int]:
+    """Return the legacy RNG seed pair used for offline artifact construction.
+
+    The legacy program temporarily replaces the initialized network RNG with
+    ``seed3`` when it is non-zero. In that case ``seed2`` is not used.
+    """
+    primary = config.seeds.effective_offline
+    stream = 0 if config.seeds.offline else config.seeds.stream
+    return primary, stream
+
+
 def config_hash(config: ProjectConfig) -> str:
     encoded = json.dumps(config.to_dict(), sort_keys=True, separators=(",", ":")).encode()
     return hashlib.sha256(encoded).hexdigest()
 
 
 def structural_hash(config: ProjectConfig) -> str:
+    offline_seed, stream_seed = artifact_rng_seeds(config)
     payload = {
         "network": config.to_dict()["network"],
-        "network_seed": config.seeds.network,
+        # Keep the historic key so artifacts built with the default
+        # offline=stream=0 configuration retain their existing identity.
+        "network_seed": offline_seed,
         "dtype": config.artifact.dtype,
     }
+    if stream_seed:
+        payload["stream_seed"] = stream_seed
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
     return hashlib.sha256(encoded).hexdigest()
 
@@ -112,6 +128,7 @@ def save_artifact(
     bank: PatternBank,
     weights: sparse.csr_matrix,
 ) -> Path:
+    offline_seed, stream_seed = artifact_rng_seeds(config)
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
     pattern_path = output / "patterns.npz"
@@ -133,7 +150,8 @@ def save_artifact(
     manifest = {
         "schema_version": 1,
         "artifact_name": config.artifact.name,
-        "network_seed": config.seeds.network,
+        "network_seed": offline_seed,
+        "stream_seed": stream_seed,
         "shape": list(weights.shape),
         "nnz": int(weights.nnz),
         "dtype": str(weights.dtype),

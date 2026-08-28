@@ -36,15 +36,18 @@ def phase_overlap(
     period_min_ms: float = 10.0,
     period_max_ms: float = 200.0,
     period_step_ms: float = 5.0,
+    window_end_ms: float | None = None,
 ) -> dict[str, list[float] | float | int]:
+    end = float(window_end_ms) if window_end_ms is not None else (
+        float(spike_times_ms[-1]) if spike_times_ms.size else 0.0
+    )
+    start = max(0.0, end - window_ms)
     if spike_times_ms.size == 0:
         return {
-            "window_start_ms": 0.0, "window_end_ms": 0.0, "spikes": 0,
+            "window_start_ms": start, "window_end_ms": end, "spikes": 0,
             "best_period_ms": [0.0] * len(H), "overlap": [0.0] * len(H),
         }
-    end = float(spike_times_ms[-1])
-    start = max(0.0, end - window_ms)
-    mask = spike_times_ms >= start
+    mask = (spike_times_ms >= start) & (spike_times_ms <= end + 1e-7)
     times = spike_times_ms[mask]
     neurons = spike_neurons[mask]
     denominator = max(1, len(times))
