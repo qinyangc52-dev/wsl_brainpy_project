@@ -136,3 +136,31 @@ def test_invalid_stdp_block_size_fails_config_validation(block_size):
     ))
     with pytest.raises(ConfigError, match="stdp_block_size must be a positive integer"):
         invalid.validate()
+
+
+@pytest.mark.parametrize(
+    ("sigma_min", "sigma_max", "message"),
+    [
+        (5.0, None, "must be set together"),
+        (None, 7.0, "must be set together"),
+        (float("nan"), 7.0, "bounds must be finite"),
+        (5.0, float("inf"), "bounds must be finite"),
+        (8.0, 7.0, "cannot exceed"),
+    ],
+)
+def test_invalid_sigma_schedule_fails_config_validation(sigma_min, sigma_max, message):
+    base = load_config(PROJECT / "configs" / "prototype.yaml")
+    invalid = replace(
+        base,
+        runtime=replace(base.runtime, sigma_min=sigma_min, sigma_max=sigma_max),
+    )
+    with pytest.raises(ConfigError, match=message):
+        invalid.validate()
+
+
+@pytest.mark.parametrize("field", ["output_bin_ms", "duration_ms", "chunk_ms"])
+def test_runtime_grid_intervals_must_align_with_dt(field):
+    base = load_config(PROJECT / "configs" / "prototype.yaml")
+    invalid = replace(base, runtime=replace(base.runtime, **{field: 1.05}))
+    with pytest.raises(ConfigError, match=rf"runtime\.{field} must be an integer multiple"):
+        invalid.validate()

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import math
 
 import jax
 import jax.numpy as jnp
@@ -97,6 +98,22 @@ class SigmaScheduler:
     dt_ms: float
     sigma_min: float | None = None
     sigma_max: float | None = None
+
+    def __post_init__(self) -> None:
+        if not all(
+            math.isfinite(value)
+            for value in (self.sigma, self.duration_ms, self.dt_ms)
+        ):
+            raise ValueError("sigma, duration_ms and dt_ms must be finite")
+        if self.duration_ms <= 0 or self.dt_ms <= 0:
+            raise ValueError("duration_ms and dt_ms must be positive")
+        if (self.sigma_min is None) != (self.sigma_max is None):
+            raise ValueError("sigma_min and sigma_max must be set together")
+        if self.sigma_min is not None and self.sigma_max is not None:
+            if not math.isfinite(self.sigma_min) or not math.isfinite(self.sigma_max):
+                raise ValueError("sigma bounds must be finite")
+            if self.sigma_min > self.sigma_max:
+                raise ValueError("sigma_min cannot exceed sigma_max")
 
     @classmethod
     def from_config(cls, runtime: RuntimeConfig) -> "SigmaScheduler":

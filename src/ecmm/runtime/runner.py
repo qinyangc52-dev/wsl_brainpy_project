@@ -17,7 +17,7 @@ import numpy as np
 from scipy import sparse
 
 from ..artifacts import config_hash, portable_artifact_path, validate_artifact
-from ..config import ProjectConfig, dump_config
+from ..config import ProjectConfig, dump_config, exact_step_count
 from ..models import CueInput, ECMMBrainPyNetwork, NoiseInput, SigmaScheduler
 from ..monitors import MonitorSuite
 from .checkpoint import Checkpoint, load_checkpoint, save_checkpoint
@@ -113,8 +113,21 @@ class SimulationRunner:
             )
         dump_config(self.config, self.output_dir / "config.resolved.yaml")
         self._write_run_manifest(status="running", resumed=resume)
-        total_steps = int(round(self.config.runtime.duration_ms / self.config.runtime.dt_ms))
-        chunk_steps = int(round(self.config.runtime.chunk_ms / self.config.runtime.dt_ms))
+        total_steps = exact_step_count(
+            self.config.runtime.duration_ms,
+            self.config.runtime.dt_ms,
+            "runtime.duration_ms",
+        )
+        chunk_steps = exact_step_count(
+            self.config.runtime.chunk_ms,
+            self.config.runtime.dt_ms,
+            "runtime.chunk_ms",
+        )
+        output_bin_steps = exact_step_count(
+            self.config.runtime.output_bin_ms,
+            self.config.runtime.dt_ms,
+            "runtime.output_bin_ms",
+        )
         started = time.perf_counter()
         chunk_timings: list[float] = []
         status = "complete"
@@ -133,10 +146,7 @@ class SimulationRunner:
                 steps = min(chunk_steps, total_steps - completed_step)
                 if (self.config.execution.stop_rate_hz > 0 and
                         self.config.execution.stop_windows > 0):
-                    flush_steps = int(round(
-                        self.config.monitors.flush_bins *
-                        self.config.runtime.output_bin_ms / self.config.runtime.dt_ms
-                    ))
+                    flush_steps = self.config.monitors.flush_bins * output_bin_steps
                     next_flush_step = (completed_step // flush_steps + 1) * flush_steps
                     steps = min(steps, next_flush_step - completed_step)
                 noise_values = noise.chunk(completed_step, steps, model.num)

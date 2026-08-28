@@ -1,6 +1,7 @@
 import brainpy.math as bm
 import jax
 import numpy as np
+import pytest
 from scipy import sparse
 
 from ecmm.config import CueConfig, RuntimeConfig
@@ -50,6 +51,25 @@ def test_sigma_scheduler_is_triangular():
     )
     values = np.asarray(schedule.values(0, 10))
     np.testing.assert_allclose(values[[0, 4, 9]], [5.4, 7.0, 5.0])
+
+
+@pytest.mark.parametrize(
+    ("sigma_min", "sigma_max", "message"),
+    [
+        (5.0, None, "must be set together"),
+        (float("nan"), 7.0, "bounds must be finite"),
+        (8.0, 7.0, "cannot exceed"),
+    ],
+)
+def test_sigma_scheduler_rejects_invalid_bounds(sigma_min, sigma_max, message):
+    with pytest.raises(ValueError, match=message):
+        SigmaScheduler(
+            sigma=6.0,
+            duration_ms=10.0,
+            dt_ms=1.0,
+            sigma_min=sigma_min,
+            sigma_max=sigma_max,
+        )
 
 
 def test_cue_forces_spike_and_state_round_trip():

@@ -212,8 +212,23 @@ def validate_config(config: ProjectConfig) -> list[str]:
         errors.append("runtime.noise_mode must be gaussian or constant")
     if r.chunk_ms + 1e-12 < r.dt_ms or r.output_bin_ms + 1e-12 < r.dt_ms:
         errors.append("runtime chunk/output bin cannot be smaller than dt")
-    if r.sigma_min is not None and r.sigma_max is not None and r.sigma_min > r.sigma_max:
-        errors.append("runtime.sigma_min cannot exceed sigma_max")
+    if math.isfinite(r.dt_ms) and r.dt_ms > 0:
+        for name, value in (
+            ("output_bin_ms", r.output_bin_ms),
+            ("duration_ms", r.duration_ms),
+            ("chunk_ms", r.chunk_ms),
+        ):
+            if math.isfinite(value) and not _is_step_aligned(value, r.dt_ms):
+                errors.append(f"runtime.{name} must be an integer multiple of runtime.dt_ms")
+    sigma_bounds = (r.sigma_min, r.sigma_max)
+    if (r.sigma_min is None) != (r.sigma_max is None):
+        errors.append("runtime.sigma_min and sigma_max must be set together")
+    elif all(value is not None for value in sigma_bounds):
+        sigma_min, sigma_max = sigma_bounds
+        if not math.isfinite(sigma_min) or not math.isfinite(sigma_max):
+            errors.append("runtime sigma bounds must be finite")
+        elif sigma_min > sigma_max:
+            errors.append("runtime.sigma_min cannot exceed sigma_max")
     if min(m.flush_bins, m.overlap_history, m.patterns_observed, m.playback_patterns) <= 0:
         errors.append("monitor integer windows/counts must be positive")
     if m.overlap_start_ms < 0 or m.overlap_window_ms <= 0:
@@ -242,3 +257,19 @@ def validate_config(config: ProjectConfig) -> list[str]:
         if cue.start_ms < 0 or cue.spike_count <= 0 or cue.frequency_hz <= 0:
             errors.append(f"cues[{index}] has invalid time/count/frequency")
     return errors
+
+
+def _is_step_aligned(value: float, dt_ms: float) -> bool:
+    nearest = round(value / dt_ms)
+    tolerance = 1e-9 * max(1.0, abs(value), abs(dt_ms))
+    return abs(value - nearest * dt_ms) <= tolerance
+
+
+def exact_step_count(value_ms: float, dt_ms: float, name: str = "time interval") -> int:
+    """Convert an already configured time interval without silent quantization."""
+    if (not math.isfinite(value_ms) or not math.isfinite(dt_ms) or
+            value_ms <= 0 or dt_ms <= 0):
+        raise ConfigError(f"{name} and runtime.dt_ms must be finite and positive")
+    if not _is_step_aligned(value_ms, dt_ms):
+        raise ConfigError(f"{name} must be an integer multiple of runtime.dt_ms")
+    return int(round(value_ms / dt_ms))
